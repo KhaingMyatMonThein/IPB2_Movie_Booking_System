@@ -1,0 +1,6 @@
+@IPB2_Movie_Booking_System_MinimalApi_HostAddress = http://localhost:5262
+
+GET {{IPB2_Movie_Booking_System_MinimalApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
