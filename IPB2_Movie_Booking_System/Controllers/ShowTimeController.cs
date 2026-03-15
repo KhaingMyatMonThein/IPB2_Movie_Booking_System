@@ -1,6 +1,9 @@
-﻿using IPB2_Movie_Booking_System_Database.AppDbContextModels;
+using IPB2_Movie_Booking_System_Database.AppDbContextModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+namespace IPB2_Movie_Booking_System.Controllers
+{
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,34 +19,29 @@ public class ShowtimeController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetShowtimes()
     {
-        var showtimes = await _context.Showtimes
-            .Include(x => x.Movie)
-            .Include(x => x.Screen)
-            .ThenInclude(x => x.Theater)
-            .ToListAsync();
-
-        return Ok(showtimes);
+        var feature = new Features.Showtimes.GetShowtimes.GetShowtimesFeature(_context);
+        var response = await feature.GetShowtimesAsync(new Features.Showtimes.GetShowtimes.GetShowtimesRequest());
+        return Ok(response.Showtimes);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateShowtime(Showtime showtime)
+    public async Task<IActionResult> CreateShowtime(Features.Showtimes.CreateShowtime.CreateShowtimeRequest request)
     {
-        _context.Showtimes.Add(showtime);
-        await _context.SaveChangesAsync();
-        return Ok(showtime);
+        var feature = new Features.Showtimes.CreateShowtime.CreateShowtimeFeature(_context);
+        var response = await feature.CreateShowtimeAsync(request);
+        return Ok(response.Showtime);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteShowtime(int id)
     {
-        var showtime = await _context.Showtimes.FindAsync(id);
+        var feature = new Features.Showtimes.DeleteShowtime.DeleteShowtimeFeature(_context);
+        var response = await feature.DeleteShowtimeAsync(new Features.Showtimes.DeleteShowtime.DeleteShowtimeRequest { Id = id });
 
-        if (showtime == null)
-            return NotFound();
+        if (!response.Success)
+            return NotFound(response.Message);
 
-        _context.Showtimes.Remove(showtime);
-        await _context.SaveChangesAsync();
-
-        return Ok("Deleted");
+        return Ok(response.Message);
     }
+}
 }

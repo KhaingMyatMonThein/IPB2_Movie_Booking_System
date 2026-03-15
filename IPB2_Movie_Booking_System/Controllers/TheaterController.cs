@@ -1,6 +1,9 @@
-﻿using IPB2_Movie_Booking_System_Database.AppDbContextModels;
+using IPB2_Movie_Booking_System_Database.AppDbContextModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+namespace IPB2_Movie_Booking_System.Controllers
+{
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,40 +19,44 @@ public class TheaterController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTheaters()
     {
-        return Ok(await _context.Theaters.ToListAsync());
+        var feature = new Features.Theaters.GetTheaters.GetTheatersFeature(_context);
+        var response = await feature.GetTheatersAsync(new Features.Theaters.GetTheaters.GetTheatersRequest());
+        return Ok(response.Theaters);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateTheater(Theater theater)
+    public async Task<IActionResult> CreateTheater(Features.Theaters.CreateTheater.CreateTheaterRequest request)
     {
-        _context.Theaters.Add(theater);
-        await _context.SaveChangesAsync();
-        return Ok(theater);
+        var feature = new Features.Theaters.CreateTheater.CreateTheaterFeature(_context);
+        var response = await feature.CreateTheaterAsync(request);
+        return Ok(response.Theater);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateTheater(int id, Theater theater)
+    public async Task<IActionResult> UpdateTheater(int id, Features.Theaters.UpdateTheater.UpdateTheaterRequest request)
     {
-        if (id != theater.TheaterId)
+        if (id != request.Id)
             return BadRequest();
 
-        _context.Entry(theater).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        var feature = new Features.Theaters.UpdateTheater.UpdateTheaterFeature(_context);
+        var response = await feature.UpdateTheaterAsync(request);
 
-        return Ok(theater);
+        if (!response.Success)
+            return NotFound();
+
+        return Ok(response.Theater);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTheater(int id)
     {
-        var theater = await _context.Theaters.FindAsync(id);
+        var feature = new Features.Theaters.DeleteTheater.DeleteTheaterFeature(_context);
+        var response = await feature.DeleteTheaterAsync(new Features.Theaters.DeleteTheater.DeleteTheaterRequest { Id = id });
 
-        if (theater == null)
-            return NotFound();
+        if (!response.Success)
+            return NotFound(response.Message);
 
-        _context.Theaters.Remove(theater);
-        await _context.SaveChangesAsync();
-
-        return Ok("Deleted");
+        return Ok(response.Message);
     }
+}
 }

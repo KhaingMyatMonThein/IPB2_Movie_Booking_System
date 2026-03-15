@@ -1,6 +1,9 @@
-﻿using IPB2_Movie_Booking_System_Database.AppDbContextModels;
+using IPB2_Movie_Booking_System_Database.AppDbContextModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+namespace IPB2_Movie_Booking_System.Controllers
+{
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,30 +19,29 @@ public class ScreenController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetScreens()
     {
-        return Ok(await _context.Screens
-            .Include(x => x.Theater)
-            .ToListAsync());
+        var feature = new Features.Screens.GetScreens.GetScreensFeature(_context);
+        var response = await feature.GetScreensAsync(new Features.Screens.GetScreens.GetScreensRequest());
+        return Ok(response.Screens);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateScreen(Screen screen)
+    public async Task<IActionResult> CreateScreen(Features.Screens.CreateScreen.CreateScreenRequest request)
     {
-        _context.Screens.Add(screen);
-        await _context.SaveChangesAsync();
-        return Ok(screen);
+        var feature = new Features.Screens.CreateScreen.CreateScreenFeature(_context);
+        var response = await feature.CreateScreenAsync(request);
+        return Ok(response.Screen);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteScreen(int id)
     {
-        var screen = await _context.Screens.FindAsync(id);
+        var feature = new Features.Screens.DeleteScreen.DeleteScreenFeature(_context);
+        var response = await feature.DeleteScreenAsync(new Features.Screens.DeleteScreen.DeleteScreenRequest { Id = id });
 
-        if (screen == null)
-            return NotFound();
+        if (!response.Success)
+            return NotFound(response.Message);
 
-        _context.Screens.Remove(screen);
-        await _context.SaveChangesAsync();
-
-        return Ok("Deleted");
+        return Ok(response.Message);
     }
+}
 }

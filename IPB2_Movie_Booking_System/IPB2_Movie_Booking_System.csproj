@@ -10,4 +10,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\IPB2_Movie_Booking_System_Database\IPB2_Movie_Booking_System_Database.csproj" />
+  </ItemGroup>
+
 </Project>

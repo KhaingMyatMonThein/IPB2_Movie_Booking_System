@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using IPB2_Movie_Booking_System_Database.AppDbContextModels;
+using IPB2_Movie_Booking_System.Features;
 
 namespace IPB2_Movie_Booking_System.Controllers
 {
@@ -19,148 +20,92 @@ namespace IPB2_Movie_Booking_System.Controllers
         [HttpGet("movies")]
         public async Task<IActionResult> GetMovies()
         {
-            var movies = await _context.Movies.ToListAsync();
-            return Ok(movies);
+            var feature = new Features.Movies.GetMovies.GetMoviesFeature(_context);
+            var response = await feature.GetMoviesAsync(new Features.Movies.GetMovies.GetMoviesRequest());
+            return Ok(response.Movies);
         }
 
         [HttpGet("movies/{movieId}/showtimes")]
         public async Task<IActionResult> GetShowtimesByMovie(int movieId)
         {
-            var showtimes = await _context.Showtimes
-                .Where(x => x.MovieId == movieId)
-                .Select(x => new
-                {
-                    x.ShowtimeId,
-                    x.ShowDate,
-                    x.ShowTime,
-                    x.Price,
-                    Screen = x.Screen.ScreenName,
-                    Theater = x.Screen.Theater.TheaterName
-                })
-                .ToListAsync();
-
-            return Ok(showtimes);
+            var feature = new Features.Movies.GetShowtimes.GetShowtimesFeature(_context);
+            var response = await feature.GetShowtimesAsync(new Features.Movies.GetShowtimes.GetShowtimesRequest { MovieId = movieId });
+            return Ok(response.Showtimes);
         }
 
 
         [HttpGet("theaters")]
         public async Task<IActionResult> GetTheaters()
         {
-            var theaters = await _context.Theaters.ToListAsync();
-            return Ok(theaters);
+            var feature = new Features.Theaters.GetTheaters.GetTheatersFeature(_context);
+            var response = await feature.GetTheatersAsync(new Features.Theaters.GetTheaters.GetTheatersRequest());
+            return Ok(response.Theaters);
         }
 
 
         [HttpGet("theaters/{theaterId}/screens")]
         public async Task<IActionResult> GetScreens(int theaterId)
         {
-            var screens = await _context.Screens
-                .Where(x => x.TheaterId == theaterId)
-                .ToListAsync();
-
-            return Ok(screens);
+            var feature = new Features.Theaters.GetScreens.GetScreensFeature(_context);
+            var response = await feature.GetScreensAsync(new Features.Theaters.GetScreens.GetScreensRequest { TheaterId = theaterId });
+            return Ok(response.Screens);
         }
 
   
         [HttpGet("showtimes/{showtimeId}/available-seats")]
         public async Task<IActionResult> GetAvailableSeats(int showtimeId)
         {
-            var showtime = await _context.Showtimes
-                .Include(x => x.Screen)
-                .FirstOrDefaultAsync(x => x.ShowtimeId == showtimeId);
-
-            if (showtime == null)
+            var feature = new Features.Bookings.GetAvailableSeats.GetAvailableSeatsFeature(_context);
+            var response = await feature.GetAvailableSeatsAsync(new Features.Bookings.GetAvailableSeats.GetAvailableSeatsRequest { ShowtimeId = showtimeId });
+            
+            if (response == null)
                 return NotFound("Showtime not found");
 
-            int totalSeats = (int)showtime.Screen.TotalSeats;
-
-            int bookedSeats = await _context.Bookings
-                .Where(x => x.ShowtimeId == showtimeId)
-                .SumAsync(x => (int?)x.SeatsBooked) ?? 0;
-
-            int availableSeats = totalSeats - bookedSeats;
-
-            return Ok(new
-            {
-                TotalSeats = totalSeats,
-                BookedSeats = bookedSeats,
-                AvailableSeats = availableSeats
-            });
+            return Ok(response);
         }
 
 
         [HttpPost("customers")]
-        public async Task<IActionResult> CreateCustomer(Customer customer)
+        public async Task<IActionResult> CreateCustomer(Features.Customers.CreateCustomer.CreateCustomerRequest request)
         {
-            _context.Customers.Add(customer);
-            await _context.SaveChangesAsync();
-
-            return Ok(customer);
+            var feature = new Features.Customers.CreateCustomer.CreateCustomerFeature(_context);
+            var response = await feature.CreateCustomerAsync(request);
+            return Ok(response.Customer);
         }
 
  
         [HttpPost("book-ticket")]
-        public async Task<IActionResult> BookTicket(Booking booking)
+        public async Task<IActionResult> BookTicket(Features.Bookings.BookTicket.BookTicketRequest request)
         {
-            var showtime = await _context.Showtimes
-                .Include(x => x.Screen)
-                .FirstOrDefaultAsync(x => x.ShowtimeId == booking.ShowtimeId);
+            var feature = new Features.Bookings.BookTicket.BookTicketFeature(_context);
+            var result = await feature.BookTicketAsync(request);
 
-            if (showtime == null)
-                return NotFound("Showtime not found");
+            if (!result.Success)
+                return BadRequest(result.Message);
 
-            int totalSeats = (int)showtime.Screen.TotalSeats;
-
-            int bookedSeats = await _context.Bookings
-                .Where(x => x.ShowtimeId == booking.ShowtimeId)
-                .SumAsync(x => (int?)x.SeatsBooked) ?? 0;
-
-            int availableSeats = totalSeats - bookedSeats;
-
-            if (booking.SeatsBooked > availableSeats)
-                return BadRequest("Not enough seats available");
-
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                Message = "Booking Successful",
-                booking.BookingId
-            });
+            return Ok(new { Message = result.Message, BookingId = result.BookingId });
         }
 
     
         [HttpGet("bookings")]
         public async Task<IActionResult> GetBookings()
         {
-            var bookings = await _context.Bookings
-                .Include(x => x.Customer)
-                .Include(x => x.Showtime)
-                .ThenInclude(x => x.Movie)
-                .Include(x => x.Showtime.Screen)
-                .ThenInclude(x => x.Theater)
-                .ToListAsync();
-
-            return Ok(bookings);
+            var feature = new Features.Bookings.GetBookings.GetBookingsFeature(_context);
+            var response = await feature.GetBookingsAsync(new Features.Bookings.GetBookings.GetBookingsRequest());
+            return Ok(response.Bookings);
         }
 
 
         [HttpGet("bookings/{bookingId}")]
         public async Task<IActionResult> GetBooking(int bookingId)
         {
-            var booking = await _context.Bookings
-                .Include(x => x.Customer)
-                .Include(x => x.Showtime)
-                .ThenInclude(x => x.Movie)
-                .Include(x => x.Showtime.Screen)
-                .ThenInclude(x => x.Theater)
-                .FirstOrDefaultAsync(x => x.BookingId == bookingId);
+            var feature = new Features.Bookings.GetBookingById.GetBookingByIdFeature(_context);
+            var response = await feature.GetBookingByIdAsync(new Features.Bookings.GetBookingById.GetBookingByIdRequest { BookingId = bookingId });
 
-            if (booking == null)
+            if (response.Booking == null)
                 return NotFound();
 
-            return Ok(booking);
+            return Ok(response.Booking);
         }
     }
 }

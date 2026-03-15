@@ -1,51 +1,61 @@
-﻿using IPB2_Movie_Booking_System_Database.AppDbContextModels;
+using IPB2_Movie_Booking_System_Database.AppDbContextModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace IPB2_Movie_Booking_System.Controllers
 {
-    public class CustomerController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class CustomerController : ControllerBase
     {
-        public IActionResult Index()
+        private readonly AppDbContext _context;
+
+        public CustomerController(AppDbContext context)
         {
-            return View();
+            _context = context;
         }
 
-        [HttpGet("customers")]
+        [HttpGet]
         public async Task<IActionResult> GetCustomers()
         {
-            return Ok(await _context.Customers.ToListAsync());
+            var feature = new Features.Customers.GetCustomers.GetCustomersFeature(_context);
+            var response = await feature.GetCustomersAsync(new Features.Customers.GetCustomers.GetCustomersRequest());
+            return Ok(response.Customers);
         }
 
-        private IActionResult Ok(object value)
+        [HttpPost]
+        public async Task<IActionResult> CreateCustomer(Features.Customers.CreateCustomer.CreateCustomerRequest request)
         {
-            throw new NotImplementedException();
+            var feature = new Features.Customers.CreateCustomer.CreateCustomerFeature(_context);
+            var response = await feature.CreateCustomerAsync(request);
+            return Ok(response.Customer);
         }
 
-        [HttpPut("customers/{id}")]
-        public async Task<IActionResult> UpdateCustomer(int id, Customer customer)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCustomer(int id, Features.Customers.UpdateCustomer.UpdateCustomerRequest request)
         {
-            if (id != customer.CustomerId)
+            if (id != request.Id)
                 return BadRequest();
 
-            _context.Entry(customer).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var feature = new Features.Customers.UpdateCustomer.UpdateCustomerFeature(_context);
+            var response = await feature.UpdateCustomerAsync(request);
 
-            return Ok(customer);
-        }
-
-        [HttpDelete("customers/{id}")]
-        public async Task<IActionResult> DeleteCustomer(int id)
-        {
-            var customer = await _context.Customers.FindAsync(id);
-
-            if (customer == null)
+            if (!response.Success)
                 return NotFound();
 
-            _context.Customers.Remove(customer);
-            await _context.SaveChangesAsync();
+            return Ok(response.Customer);
+        }
 
-            return Ok("Deleted");
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCustomer(int id)
+        {
+            var feature = new Features.Customers.DeleteCustomer.DeleteCustomerFeature(_context);
+            var response = await feature.DeleteCustomerAsync(new Features.Customers.DeleteCustomer.DeleteCustomerRequest { Id = id });
+
+            if (!response.Success)
+                return NotFound(response.Message);
+
+            return Ok(response.Message);
         }
     }
 }

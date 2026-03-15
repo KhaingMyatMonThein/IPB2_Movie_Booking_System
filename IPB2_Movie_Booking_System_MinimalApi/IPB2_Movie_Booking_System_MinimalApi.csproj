@@ -22,6 +22,9 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
+	  <ItemGroup>
+    <ProjectReference Include="..\IPB2_Movie_Booking_System_Database\IPB2_Movie_Booking_System_Database.csproj" />
+  </ItemGroup>
 
 
 </Project>
